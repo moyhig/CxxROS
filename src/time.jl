@@ -1,37 +1,34 @@
-# $Id: time.jl,v 1.2 2018/04/15 12:37:38 manabu Exp manabu $
-
 using Cxx
+using TimeZones
 
-# ros::Time
+for dtype in [ :Time, :Duration, :Rate ]
+    cppname = string("ros::", dtype)
+    cxxtval = Expr(:macrocall, Symbol("@cxxt_str"), cppname)
+    cxxtref = Expr(:macrocall, Symbol("@cxxt_str"), string(cppname, "&"))
+    symtval = Symbol(string("Ros", dtype))
+    symtref = Symbol(string("Ros", dtype, "R"))
+    symtall = Symbol(string("Ros", dtype, "U"))
 
-const RosTime = Union{cxxt"ros::Time",cxxt"ros::Time&"}
+    @eval begin
+        global const $(symtval) = $(cxxtval)
+        global const $(symtref) = $(cxxtref)
+        global const $(symtall) = Union{$(cxxtval), $(cxxtref)}
+        export $(symtval), $(symtref) #, $(symtall)
+    end
 
-function Base.convert(::Type{RosTime}, ut::Float64)
-    rt = icxx"$RosTime();"
-    ut0, ut1 = Int32(trunc(ut)), Int32(trunc((ut - trunc(ut)) * 1000000000))
-    icxx"$rt.sec = $ut0; $rt.nsec = $ut1;"
-    rt
+    cxxcstr = Expr(:macrocall, Symbol("@icxx_str"), string(cppname, "((double) \$t);"))
+    @eval Base.convert(::Type{$(symtval)}, t::Float64) = $(cxxcstr)
 end
 
-function Base.convert(::Type{Int64}, rt::RosTime)
-    # (Dates.value(Dates.unix2datetime(0))
-    #  - Dates.value(Dates.epochms2datetime(0)))
-    # = 62167219200000
-    icxx"(long)($rt.toSec()*1000.);" + 62167219200000
+function Base.convert(::Type{ZonedDateTime}, rt::RosTimeU)
+    dt = Dates.unix2datetime(icxx"(long)($rt.toSec());")
+    astimezone(ZonedDateTime(dt, tz"UTC"), localzone())
 end
 
-function Base.convert(::Type{RosTime}, t::DateTime)
-    rt = icxx"$RosTime();"
-    ut = Base.Dates.datetime2unix(t)
-    ut0, ut1 = Int32(trunc(ut)), Int32(trunc((ut - trunc(ut)) * 1000000000))
-    icxx"$rt.sec = $ut0; $rt.nsec = $ut1;"
-    rt
-end
+Base.get(rt::RosTimeU)::Float64              = icxx"$rt.toSec();"
+     set(rt::RosTimeU, t::Float64)::RosTimeU = icxx"$rt.fromSec((double) $t);"
 
-# ros::Rate and ros::spin, ros::spinOnce
-export RosRate, RosSpin, stop
-
-const RosRate = Union{cxxt"ros::Rate", cxxt"ros::Rate&"}
+# wrapper for ros::spin, ros::spinOnce
 
 mutable struct RosSpin
     should_continue::Bool
@@ -43,14 +40,14 @@ end
 
 function spin(s::RosSpin)
     while s.should_continue
-        println("HELO: ", s.should_continue)
+        # println("RosSpin: ", s.should_continue)
         @cxx ros::spinOnce()
         try
             sleep(.001)
         catch ex
             if isa(ex, ErrorException)
-                println("exception: ", ex.msg)
-                #s.should_continue = false
+                println("got exception: ", ex.msg)
+                s.should_continue = false
                 break
             end
         end
@@ -65,5 +62,7 @@ end
 
 function stop(s::RosSpin)
     s.should_continue = false
-    #println("HELO: ", s.should_continue)
+    #println("RosSpin: ", s.should_continue)
 end
+
+export RosSpin, stop, set

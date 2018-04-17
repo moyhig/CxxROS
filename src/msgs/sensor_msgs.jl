@@ -1,5 +1,3 @@
-# $Id: sensor_msgs.jl,v 1.2 2018/04/15 01:15:30 manabu Exp manabu $
-
 module sensor_msgs
 
 using Cxx
@@ -11,20 +9,19 @@ cxx"""
     """
 
 for dtype in [ :Imu, :LaserScan ]
-    cppname  = string("sensor_msgs::", dtype)
-    cxxtdef  = Expr(:macrocall, Symbol("@cxxt_str"), cppname)
-    symname  = Symbol(dtype, :Msg)
-    @eval global const $(symname) = $(cxxtdef)
-    body = Expr(:macrocall, Symbol("@icxx_str"), string(cppname, "();"))
-    @eval (::Type{$(symname)})() = $(body)
-end
+    cppname = string("sensor_msgs::", dtype)
+    cxxtval = Expr(:macrocall, Symbol("@cxxt_str"), cppname)
+    symtval = Symbol(dtype, :Msg)
 
-# no show interface for elements of boost::array cause exception
-function Base.show(io::IO, ptr::Cxx.CppRef{Cxx.CxxArrayType{T},Cxx.NullCVR}) where T
-    println(io, "Array<", Base.typename(T), ",1>")
+    @eval global const $(symtval) = $(cxxtval)
+
+    cxxcstr = Expr(:macrocall, Symbol("@icxx_str"), string(cppname, "();"))
+    @eval (::Type{$(symtval)})() = $(cxxcstr)
 end
 
 end #module
 
 eval(sensor_msgs, :(Imu	      = ImuMsg))
 eval(sensor_msgs, :(LaserScan = LaserScanMsg))
+
+export sensor_msgs

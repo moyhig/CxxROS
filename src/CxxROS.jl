@@ -2,12 +2,16 @@
 
 module CxxROS
 
-export RosTime
-export std_msgs, sensor_msgs, geometry_msgs, nav_msgs
-
 using Cxx
+include("std.jl")
 
-const path_to_ros = "/opt/ros/lunar/"
+try
+    global const path_to_ros = normpath(joinpath(ENV["ROS_ROOT"], "../.."))
+    isdir(path_to_ros)
+catch
+    throw(ErrorException("please set environment variavle: ROS_ROOT"))
+end
+
 addHeaderDir(path_to_ros * "include", kind=C_System)
 
 cxx"""
@@ -17,7 +21,7 @@ cxx"""
 # importing objects...
 
 Libdl.dlopen(path_to_ros * "lib/libroscpp.so", Libdl.RTLD_GLOBAL)
-# BaseTime: Time, Duration, WallTime, WallTimeDuration,...
+
 include("time.jl")
 
 # importing datatypes...
@@ -30,3 +34,8 @@ include("msgs/nav_msgs.jl")
 include("tf.jl")
 
 end #module
+
+# no show interface for elements of boost::array cause exception
+function Base.show(io::IO, ptr::Cxx.CppRef{Cxx.CxxArrayType{T},Cxx.NullCVR}) where T
+    println(io, "Array<", Base.typename(T), ",1>")
+end
