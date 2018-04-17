@@ -15,6 +15,7 @@ addHeaderDir(path_to_ros * "include", kind=C_System)
 cxx"""
 #include <ros/ros.h>
 """
+include("boost.jl")
 
 # importing objects...
 
