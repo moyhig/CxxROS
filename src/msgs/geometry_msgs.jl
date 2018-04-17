@@ -36,16 +36,16 @@ for dtype in [ :Vector3, :Point, :Quaternion ]
     body = Expr(:macrocall, Symbol("@icxx_str"), string(cppname, "();"))
     @eval (::Type{$(symtval)})() = $(body)
 
-    body = Expr(:macrocall, Symbol("@icxx_str"), string("(", cppname, "&) \$v;"))
-    @eval Base.convert(::Type{$(symtref)}, v::$(symtval)) = $(body)
+    #body = Expr(:macrocall, Symbol("@icxx_str"), string("(", cppname, "&) \$v;"))
+    #@eval Base.convert(::Type{$(cxxtref)}, v::$(cxxtval)) = $(body)
 end
 
-function Base.convert(::Type{CT}, v::T) where {CT<:AbstractArray,T<:TRefs}
+function Base.convert(::Type{CT}, v::T) where {CT<:AbstractArray,T<:Union{TVals,TRefs}}
     convert(CT, unsafe_wrap(DenseArray, v))
 end
 
-function Base.unsafe_wrap(::Type{DenseArray}, v::T) where {T<:TRefs}
-    if typeof(icxx"$v;") <: QuaternionMsgR
+function Base.unsafe_wrap(::Type{DenseArray}, v::T) where {T<:Union{TVals,TRefs}}
+    if typeof(icxx"$v;") <: QuaternionMsgU
         WrappedCppPrimArray(icxx"&($v.x);",4)
     else
         WrappedCppPrimArray(icxx"&($v.x);",3)
@@ -64,9 +64,9 @@ end #module
 
 eval(geometry_msgs, :(Vector3     = Vector3Msg))
 eval(geometry_msgs, :(Vector3R    = Vector3MsgR))
-#eval(geometry_msgs, :(Vector3U    = Vector3MsgU))
+eval(geometry_msgs, :(Vector3U    = Vector3MsgU))
 eval(geometry_msgs, :(Quaternion  = QuaternionMsg))
 eval(geometry_msgs, :(QuaternionR = QuaternionMsgR))
-#eval(geometry_msgs, :(QuaternionU = QuaternionMsgU))
+eval(geometry_msgs, :(QuaternionU = QuaternionMsgU))
 
 export geometry_msgs
