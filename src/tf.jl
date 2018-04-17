@@ -1,5 +1,3 @@
-# $Id: tf.jl,v 1.2 2018/04/15 01:15:57 manabu Exp manabu $
-
 using Cxx
 using CxxStd: WrappedCppPrimArray
 

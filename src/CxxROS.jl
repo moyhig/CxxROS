@@ -1,5 +1,3 @@
-# $Id: CxxROS.jl,v 1.2 2018/04/15 01:14:26 manabu Exp manabu $
-
 module CxxROS
 
 using Cxx
